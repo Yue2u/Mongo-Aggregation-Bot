@@ -15,7 +15,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: sh -c "cd app && python main.py" # python tests.py &&
+    command: sh -c "cd app && python tests.py && python main.py" # python tests.py &&
     volumes:
       - ./:/app
 
