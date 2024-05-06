@@ -2,9 +2,12 @@ from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 from pydantic_core import ValidationError
+import json
 
+from db import get_collection
 from models import AggregationQuery
 from answers import WRONG_QUERY_ANSWER, START_ANSWER
+from aggregator import AggregationPipelineFactory
 
 router = Router()
 
@@ -22,4 +25,17 @@ async def message_handler(message: Message):
     except ValidationError:
         await message.answer(WRONG_QUERY_ANSWER)
         return
-    await message.answer("Input is valid")
+
+    factory = AggregationPipelineFactory(query)  # Generate pipeline
+    pipeline = factory.make_aggregation_pipeline()
+
+    collection = get_collection()  # Run aggregation
+    result_values = []
+    result_labels = []
+    async for group in collection.aggregate(pipeline):
+        result_values.append(group["total_value"])
+        result_labels.append(str(group["label"]).replace(" ", "T"))
+
+    await message.answer(
+        json.dumps({"dataset": result_values, "labels": result_labels})
+    )
