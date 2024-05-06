@@ -15,6 +15,11 @@ class AggregationPipelineFactory:
             "day": self.__make_group_by_day,
             "hour": self.__make_group_by_hour,
         }
+        self.concats = {
+            "month": self.__make_concat_by_month,
+            "day": self.__make_concat_by_day,
+            "hour": self.__make_concat_by_hour,
+        }
 
     def make_match_stage(self, dt_from: datetime, dt_upto: datetime):
         """Make conditions for match stage of aggregation"""
@@ -66,3 +71,73 @@ class AggregationPipelineFactory:
                 "count": {"$sum": 1},
             }
         }
+
+    def __make_concat_by_month(self):
+        """Make conditions for concat operator by month"""
+        return [
+            {"$toString": "$_id.year"},
+            "-",
+            {"$toString": "$_id.month"},
+            "-01T00:00:00",
+        ]
+
+    def __make_concat_by_day(self):
+        """Make conditions for concat operator by day"""
+        return [
+            {"$toString": "$_id.year"},
+            "-",
+            {"$toString": "$_id.month"},
+            "-",
+            {"$toString": "$_id.day"},
+            "T00:00:00",
+        ]
+
+    def __make_concat_by_hour(self):
+        """Make conditions for concat operator by hour"""
+        return [
+            {"$toString": "$_id.year"},
+            "-",
+            {"$toString": "$_id.month"},
+            "-",
+            {"$toString": "$_id.day"},
+            "T",
+            {"$toString": "$_id.hour"},
+            ":00:00",
+        ]
+
+    def __make_concat(self, grouping_type: str):
+        """Make conditions for concat operator by grouping_type"""
+        return self.concats[grouping_type]()
+
+    def make_project_stage(self, grouping_type: str) -> dict:
+        """Make conditions for project stage of aggregation"""
+        return {
+            "$project": {
+                "_id": 0,
+                "label": {
+                    "$dateFromString": {
+                        "dateString": {
+                            "$concat": self.__make_concat(grouping_type),
+                        },
+                        "format": "%Y-%m-%dT%H:%M:%S",
+                    }
+                },
+                "total_value": 1,
+            }
+        }
+
+    def make_sort_stage(self):
+        return {"$sort": {"label": 1}}
+
+    def make_aggregation_pipeline(self):
+        result = [
+            self.make_densify(
+                self.query.group_type, self.query.dt_from, self.query.dt_upto
+            ),
+            self.make_match_stage(self.query.dt_from, self.query.dt_upto),
+            self.make_add_fields(),
+            self.make_group_stage(self.query.group_type),
+            self.make_project_stage(self.query.group_type),
+            self.make_sort_stage(),
+        ]
+        return result
