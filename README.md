@@ -1,4 +1,4 @@
-# This is impementation of test task for RLD.
+# This is impementation of test task for RLT.
 ## Here is telegram bot that aggregates statistics from sample data.
 
 Input message should be in JSON format like
