@@ -1,0 +1,23 @@
+services:
+  mongodb:
+    image: mongo:latest
+    expose:
+      - 27017
+    environment:
+        - MONGO_INITDB_ROOT_USERNAME=root
+        - MONGO_INITDB_ROOT_PASSWORD=root
+    volumes:
+      - mongodb_data:/data/db
+      - ./:/app
+
+  bot:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: sh -c "cd app && python main.py" # python tests.py &&
+    volumes:
+      - ./:/app
+
+volumes:
+  mongodb_data:
